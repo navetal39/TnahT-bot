@@ -14,12 +14,10 @@
 
 def do_turn(game):
     planets = game.not_my_planets()
- #   if len(game.my_planets()) == 0:
-  #      return
     for source in game.my_planets():
-        my_fleets, enemy_fleets = game.my_fleets(), game.enemy_fleets()
-        good_planets = [p for p in planets if will_win(game, p, source, my_fleets, enemy_fleets)]
-        growth = [p.growth_rate for p in good_planets]
+        good_planets = [p for p in planets if will_win(game, p, source)]
+        good_planets.sort(key = lambda planet: game.distance(planet, source))
+        growth = [p.growth_rate() for p in good_planets]
         if len(growth) == 0:
             return
         max_planet = good_planets[growth.index(max(growth))]
@@ -28,17 +26,18 @@ def do_turn(game):
 
 
 
-def will_win(game, p, source, my_fleets, enemy_fleets):
+def will_win(game, p, source):
+    distance = game.distance(source, p)
+    my_rel_fleets = [f.num_ships() for f in game.my_fleets() if f.destination_planet() == p and f.turns_remaining() <= distance]
+    enemy_rel_fleets = [f.num_ships() for f in game.enemy_fleets() if f.destination_planet() == p and f.turns_remaining() <= distance]
+    my_arr_fleets = sum(my_rel_fleets)
+    enemy_arr_fleets = sum(enemy_rel_fleets)
     if p.owner() == 0:
-        #game.debug(str(p.num_ships()) + str(source.num_ships()))
-        if p.num_ships() < int(0.75 * source.num_ships()):
+        if p.num_ships() - my_arr_fleets + enemy_arr_fleets < int(0.75 * source.num_ships()):
             return True
     else:
-        distance = game.distance(source, p)
-        my_rel_fleets = [f.num_ships() for f in my_fleets if f.destination_planet() == p and f.turns_remaining() <= distance]
-        enemy_rel_fleets = [f.num_ships() for f in enemy_fleets if f.destination_planet() == p and f.turns_remaining() <= distance]
-        my_arr_fleets = sum(my_rel_fleets)
-        enemy_arr_fleets = sum(enemy_rel_fleets)
         if p.num_ships() - my_arr_fleets + enemy_arr_fleets + p.growth_rate() * distance < int(0.75 * source.num_ships()):
             return True
     return False
+
+#def will_die(game, source
