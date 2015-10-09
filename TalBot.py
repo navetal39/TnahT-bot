@@ -2,6 +2,7 @@ def do_turn(game):
     planets = game.not_my_planets()
     for source in game.my_planets():
         if will_die(game, source):
+            #game.debug("evacuate!" + str(source.num_ships()))
             good_planets = [p for p in planets if will_win_desp(game, p, source)]
             good_planets.sort(key = lambda planet: game.distance(planet, source))
             growth = [p.growth_rate() for p in good_planets]
@@ -9,7 +10,7 @@ def do_turn(game):
                 my_planets = game.my_planets()
                 my_planets.sort(key = lambda planet: planet.num_ships())
                 if len(my_planets) > 0:
-                    issue_order(source, my_planets[0], source.num_ships())
+                    game.issue_order(source, my_planets[0], source.num_ships())
             else:
                 max_planet = good_planets[growth.index(max(growth))]
                 num_ships = source.num_ships()
@@ -18,11 +19,14 @@ def do_turn(game):
             good_planets = [p for p in planets if will_win(game, p, source)]
             good_planets.sort(key = lambda planet: game.distance(planet, source))
             growth = [p.growth_rate() for p in good_planets]
-            if len(growth) == 0:
-                return
-            max_planet = good_planets[growth.index(max(growth))]
-            num_ships = int(0.75 * source.num_ships())
-            game.issue_order(source, max_planet, num_ships)
+            if len(growth) > 0:
+                max_planet = good_planets[growth.index(max(growth))]
+                if not will_die_post(game, source):
+                    num_ships = int(0.75 * source.num_ships())
+                    game.issue_order(source, max_planet, num_ships)
+                    #game.issue_order(source, max_planet, source.num_ships())
+                #else:
+                    
 
 
 
@@ -30,6 +34,7 @@ def will_win(game, p, source):
     distance = game.distance(source, p)
     my_rel_fleets = [f.num_ships() for f in game.my_fleets() if f.destination_planet() == p and f.turns_remaining() <= distance]
     enemy_rel_fleets = [f.num_ships() for f in game.enemy_fleets() if f.destination_planet() == p and f.turns_remaining() <= distance]
+    #game.debug(str(my_rel_fleets))
     my_arr_fleets = sum(my_rel_fleets)
     enemy_arr_fleets = sum(enemy_rel_fleets)
     if p.owner() == 0:
@@ -55,10 +60,21 @@ def will_win_desp(game, p, source):
     return False
 
 def will_die(game, p):
-    my_rel_fleets = [f.num_ships() for f in game.my_fleets() if f.destination_planet() == p and f.turns_remaining() == 1]
-    enemy_rel_fleets = [f.num_ships() for f in game.enemy_fleets() if f.destination_planet() == p and f.turns_remaining() == 1]
+    my_rel_fleets = [f.num_ships() for f in game.my_fleets() if f.destination_planet() == p.planet_id() and f.turns_remaining() ==1]
+    enemy_rel_fleets = [f.num_ships() for f in game.enemy_fleets() if f.destination_planet() == p.planet_id() and f.turns_remaining() == 1]
+    #game.debug(str(my_rel_fleets))
     my_arr_fleets = sum(my_rel_fleets)
     enemy_arr_fleets = sum(enemy_rel_fleets)
-    if enemy_arr_fleets > p.num_ships() + p.growth_rate() + my_arr_fleets:
+    #game.debug(str(enemy_arr_fleets) + " attacking, " + str(p.num_ships() + my_arr_fleets) + " defending")
+    if enemy_arr_fleets > p.num_ships() + my_arr_fleets:
+        return True
+    return False
+
+def will_die_post(game, p):
+    my_rel_fleets = [f.num_ships() for f in game.my_fleets() if f.destination_planet() == p.planet_id() and f.turns_remaining() == 1]
+    enemy_rel_fleets = [f.num_ships() for f in game.enemy_fleets() if f.destination_planet() == p.planet_id() and f.turns_remaining() == 1]
+    my_arr_fleets = sum(my_rel_fleets)
+    enemy_arr_fleets = sum(enemy_rel_fleets)
+    if enemy_arr_fleets > int(0.25 * p.num_ships()) + my_arr_fleets:
         return True
     return False
